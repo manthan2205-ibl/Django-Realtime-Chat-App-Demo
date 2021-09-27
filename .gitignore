@@ -1,0 +1,15 @@
+__pycache__/
+venv
+geckodriver.log
+screenshot.png
+
+# If you are using PyCharm # 
+.idea/
+
+# Visual Studio Code # 
+.vscode/* 
+!.vscode/settings.json 
+!.vscode/tasks.json 
+!.vscode/launch.json 
+!.vscode/extensions.json 
+.history
