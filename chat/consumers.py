@@ -121,23 +121,34 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
             Room_obj = Room.objects.get(id=room_id,is_delete=0)
         except:
             result = {'result': 'room_false', 'Message': 'room id does not match', 'internalCode': '001'}
-            return result
+            # return result
         try:
             User_obj = Chat_User.objects.get(id=user_id,is_delete=0)
         except:
             result = {'result': 'user_false', 'Message': 'user id does not match', 'internalCode': '002'}
-            return result
+            # return result
+
+        
+
         Messages.objects.create(room=Room_obj,user=User_obj,message=message)
         result = {'result': 'true', 'Message': 'message data enter in database', 'internalCode': '003'}
         return result
 
     @sync_to_async
-    def get_message_data(self, room_id):
+    def get_message_data(self, room_id,):
         try:
             Room_obj = Room.objects.get(id=room_id,is_delete=0)
         except:
             result = {'result': 'false', 'Message': 'room id does not match', 'internalCode': '004'}
             return result
+
+        Participants_obj = Participants.objects.get(room=Room_obj)
+        users = Participants_obj.users.all()
+        for i in users:
+            print('i', i)
+        print('users', users)
+
+
         Messages_obj = Messages.objects.filter(room=Room_obj,is_delete=0)
         Messages_obj_list = []
         for i in Messages_obj:
