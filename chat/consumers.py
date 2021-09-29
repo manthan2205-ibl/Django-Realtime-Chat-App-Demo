@@ -79,7 +79,7 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
         self.channel_name
         )
 
-        message_data = await self.get_message_data(self.room_id)
+        message_data = await self.get_message_data(self.room_id, self.user_id)
         await self.send_json(message_data)
 
 
@@ -97,12 +97,12 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
             self.room_name = "room" + str(self.room_id)
             message_data = await self.send_message_data(self.room_id, self.user_id, message)
 
-            if message_data['result'] == 'user_false':
+            if message_data['result'] == 'false':
                 await self.send_json(message_data)
-            elif message_data['result'] == 'room_false':
-                await self.send_json(message_data)
+            # elif message_data['result'] == 'room_false':
+            #     await self.send_json(message_data)
             else:
-                message_data = await self.get_message_data(self.room_id)
+                message_data = await self.get_message_data(self.room_id, self.user_id)
                 await self.send_json(message_data)
 
             await self.channel_layer.group_send(
@@ -120,49 +120,58 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
         try:
             Room_obj = Room.objects.get(id=room_id,is_delete=0)
         except:
-            result = {'result': 'room_false', 'Message': 'room id does not match', 'internalCode': '001'}
-            # return result
+            result = {'result': 'false', 'Message': 'room id does not match', 'internalCode': '001'}
+            return result
         try:
             User_obj = Chat_User.objects.get(id=user_id,is_delete=0)
         except:
-            result = {'result': 'user_false', 'Message': 'user id does not match', 'internalCode': '002'}
-            # return result
+            result = {'result': 'false', 'Message': 'user id does not match', 'internalCode': '002'}
+            return result
 
-        
-
-        Messages.objects.create(room=Room_obj,user=User_obj,message=message)
-        result = {'result': 'true', 'Message': 'message data enter in database', 'internalCode': '003'}
+        Participants_obj = Participants.objects.get(room=Room_obj)
+        users = Participants_obj.users.all()
+        if User_obj in users:
+            Messages.objects.create(room=Room_obj,user=User_obj,message=message)
+            result = {'result': 'true', 'Message': 'message data enter in database', 'internalCode': '003'}
+        else:
+            result = {'result': 'false', 'Message': 'user id does not in group', 'internalCode': '005'}
         return result
 
     @sync_to_async
-    def get_message_data(self, room_id,):
+    def get_message_data(self, room_id,user_id):
         try:
             Room_obj = Room.objects.get(id=room_id,is_delete=0)
         except:
             result = {'result': 'false', 'Message': 'room id does not match', 'internalCode': '004'}
             return result
+        
+        try:
+            User_obj = Chat_User.objects.get(id=user_id,is_delete=0)
+        except:
+            result = {'result': 'false', 'Message': 'user id does not match', 'internalCode': '005'}
+            return result
 
         Participants_obj = Participants.objects.get(room=Room_obj)
         users = Participants_obj.users.all()
-        for i in users:
-            print('i', i)
-        print('users', users)
+        if User_obj in users:
 
+            Messages_obj = Messages.objects.filter(room=Room_obj,is_delete=0)
+            Messages_obj_list = []
+            for i in Messages_obj:
+                Messages_obj_dic = {}
+                Messages_obj_dic['message_id'] = i.id
+                Messages_obj_dic['room_name'] = i.room.room_name
+                Messages_obj_dic['username'] = i.user.username
+                Messages_obj_dic['message'] = ''
+                Messages_obj_dic['file'] = ''
+                if i.file:
+                    Messages_obj_dic['file'] = i.file.url
+                if i.message:
+                    Messages_obj_dic['message'] = i.message
+                Messages_obj_list.append(Messages_obj_dic)
 
-        Messages_obj = Messages.objects.filter(room=Room_obj,is_delete=0)
-        Messages_obj_list = []
-        for i in Messages_obj:
-            Messages_obj_dic = {}
-            Messages_obj_dic['message_id'] = i.id
-            Messages_obj_dic['room_name'] = i.room.room_name
-            Messages_obj_dic['username'] = i.user.username
-            Messages_obj_dic['message'] = ''
-            Messages_obj_dic['file'] = ''
-            if i.file:
-                Messages_obj_dic['file'] = i.file.url
-            if i.message:
-                Messages_obj_dic['message'] = i.message
-            Messages_obj_list.append(Messages_obj_dic)
+            result = {'result': 'true', 'Message': Messages_obj_list, 'internalCode': '005'}
+        else:
+            result = {'result': 'false', 'Message': 'user id does not in group', 'internalCode': '005'}
 
-        result = {'result': 'true', 'Message': Messages_obj_list, 'internalCode': '005'}
         return result
