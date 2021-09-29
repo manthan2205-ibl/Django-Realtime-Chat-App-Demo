@@ -86,6 +86,8 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
     async def disconnect(self, event):
         print("disconnected", event)
 
+
+
     # Receive message from WebSocket
     async def receive_json(self, content):
         print("CONTENT", content)
@@ -136,6 +138,8 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
         else:
             result = {'result': 'false', 'Message': 'user id does not in group', 'internalCode': '005'}
         return result
+
+
 
     @sync_to_async
     def get_message_data(self, room_id,user_id):
