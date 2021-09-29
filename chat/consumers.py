@@ -1,9 +1,9 @@
 import json
 
-from channels.generic.websocket import AsyncWebsocketConsumer # The class we're using
+from channels.generic.websocket import AsyncWebsocketConsumer, AsyncJsonWebsocketConsumer# The class we're using
 from asgiref.sync import sync_to_async # Implement later
 
-from .models import Message
+from .models import *
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -58,3 +58,70 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @sync_to_async
     def save_message(self, username, room, message):
         Message.objects.create(username=username, room=room, content=message)
+
+
+
+
+
+class MessageConsumer(AsyncJsonWebsocketConsumer):
+    async def connect(self):
+        self.room_id = self.scope['url_route']['kwargs']['room_id']
+        self.user_id = self.scope['url_route']['kwargs']['user_id']
+        print('room_id', self.room_id)
+        print('user_id', self.user_id)
+        await self.accept()
+
+        self.room_group_name = 'chat_%s' % self.room_id
+
+        # Join room group
+        await self.channel_layer.group_add(
+        self.room_group_name,
+        self.channel_name
+        )
+
+        message_data = await self.get_message_data(self.room_id)
+        await self.send_json(message_data)
+
+
+    async def disconnect(self, event):
+        print("disconnected", event)
+
+    # Receive message from WebSocket
+    async def receive_json(self, content):
+        print("CONTENT", content)
+        if content['command'] == "send":
+            message = content['message']
+
+            print('message', message)
+            
+            self.room_name = "room" + str(self.room_id)
+            # meeting_data = await self.get_schedule(schedule_id=int(schedule))
+
+            await self.channel_layer.group_send(
+                self.room_name,
+                {
+                    'type': 'recieve_group_message',
+                    'message': message
+                }
+            )
+
+    @sync_to_async
+    def get_message_data(self, room_id):
+        Room_obj = Room.objects.get(id=room_id)
+        Messages_obj = Messages.objects.filter(room=Room_obj)
+        Messages_obj_list = []
+        for i in Messages_obj:
+            Messages_obj_dic = {}
+            Messages_obj_dic['message_id'] = i.id
+            Messages_obj_dic['room_name'] = i.room.room_name
+            Messages_obj_dic['username'] = i.user.username
+            Messages_obj_dic['message'] = ''
+            Messages_obj_dic['file'] = ''
+            if i.file:
+                Messages_obj_dic['file'] = i.file.url
+            if i.message:
+                Messages_obj_dic['message'] = i.message
+            Messages_obj_list.append(Messages_obj_dic)
+
+        result = {'result': 'true', 'Message': Messages_obj_list, 'internalCode': '001'}
+        return result
