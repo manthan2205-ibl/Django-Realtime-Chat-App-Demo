@@ -95,7 +95,7 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
             print('message', message)
             
             self.room_name = "room" + str(self.room_id)
-            # meeting_data = await self.get_schedule(schedule_id=int(schedule))
+            message_data = await self.send_message_data(self.room_id, self.user_id, message)
 
             await self.channel_layer.group_send(
                 self.room_name,
@@ -105,10 +105,34 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
                 }
             )
 
+        message_data = await self.get_message_data(self.room_id)
+        await self.send_json(message_data)
+
+
+
+    @sync_to_async
+    def send_message_data(self, room_id, user_id, message):
+        try:
+            Room_obj = Room.objects.get(id=room_id,is_delete=0)
+        except:
+            result = {'result': 'false', 'Message': 'room id does not match', 'internalCode': '001'}
+            return result
+        try:
+            User_obj = Chat_User.objects.get(id=user_id,is_delete=0)
+        except:
+            result = {'result': 'false', 'Message': 'user id does not match', 'internalCode': '001'}
+            return result
+        Messages.objects.create(room=Room_obj,user=User_obj,message=message)
+        return True
+
     @sync_to_async
     def get_message_data(self, room_id):
-        Room_obj = Room.objects.get(id=room_id)
-        Messages_obj = Messages.objects.filter(room=Room_obj)
+        try:
+            Room_obj = Room.objects.get(id=room_id,is_delete=0)
+        except:
+            result = {'result': 'false', 'Message': 'room id does not match', 'internalCode': '001'}
+            return result
+        Messages_obj = Messages.objects.filter(room=Room_obj,is_delete=0)
         Messages_obj_list = []
         for i in Messages_obj:
             Messages_obj_dic = {}
