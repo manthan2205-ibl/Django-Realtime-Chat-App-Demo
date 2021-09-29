@@ -97,6 +97,14 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
             self.room_name = "room" + str(self.room_id)
             message_data = await self.send_message_data(self.room_id, self.user_id, message)
 
+            if message_data['result'] == 'user_false':
+                await self.send_json(message_data)
+            elif message_data['result'] == 'room_false':
+                await self.send_json(message_data)
+            else:
+                message_data = await self.get_message_data(self.room_id)
+                await self.send_json(message_data)
+
             await self.channel_layer.group_send(
                 self.room_name,
                 {
@@ -105,9 +113,6 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
                 }
             )
 
-        message_data = await self.get_message_data(self.room_id)
-        await self.send_json(message_data)
-
 
 
     @sync_to_async
@@ -115,22 +120,23 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
         try:
             Room_obj = Room.objects.get(id=room_id,is_delete=0)
         except:
-            result = {'result': 'false', 'Message': 'room id does not match', 'internalCode': '001'}
+            result = {'result': 'room_false', 'Message': 'room id does not match', 'internalCode': '001'}
             return result
         try:
             User_obj = Chat_User.objects.get(id=user_id,is_delete=0)
         except:
-            result = {'result': 'false', 'Message': 'user id does not match', 'internalCode': '001'}
+            result = {'result': 'user_false', 'Message': 'user id does not match', 'internalCode': '002'}
             return result
         Messages.objects.create(room=Room_obj,user=User_obj,message=message)
-        return True
+        result = {'result': 'true', 'Message': 'message data enter in database', 'internalCode': '003'}
+        return result
 
     @sync_to_async
     def get_message_data(self, room_id):
         try:
             Room_obj = Room.objects.get(id=room_id,is_delete=0)
         except:
-            result = {'result': 'false', 'Message': 'room id does not match', 'internalCode': '001'}
+            result = {'result': 'false', 'Message': 'room id does not match', 'internalCode': '004'}
             return result
         Messages_obj = Messages.objects.filter(room=Room_obj,is_delete=0)
         Messages_obj_list = []
@@ -147,5 +153,5 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
                 Messages_obj_dic['message'] = i.message
             Messages_obj_list.append(Messages_obj_dic)
 
-        result = {'result': 'true', 'Message': Messages_obj_list, 'internalCode': '001'}
+        result = {'result': 'true', 'Message': Messages_obj_list, 'internalCode': '005'}
         return result
