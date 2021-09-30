@@ -101,12 +101,10 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
 
             # if message_data['result'] == 'false':
                 # await self.send_json(message_data)
-            # elif message_data['result'] == 'room_false':
-            #     await self.send_json(message_data)
             # else:
                 # message_data = await self.get_message_data(self.room_id, self.user_id)
                 # await self.send_json(message_data)
-                
+
             await self.send_json(message_data)
 
             await self.channel_layer.group_send(
