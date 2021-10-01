@@ -1,9 +1,13 @@
 import json
 
 from channels.generic.websocket import AsyncWebsocketConsumer, AsyncJsonWebsocketConsumer# The class we're using
-from asgiref.sync import sync_to_async # Implement later
+from asgiref.sync import sync_to_async
+from django.db.models import manager # Implement later
 
 from .models import *
+from .serializers import MessagesSerializer
+from chat import serializers
+
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -85,6 +89,10 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
 
     async def disconnect(self, event):
         print("disconnected", event)
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+    )
 
 
 
@@ -184,8 +192,40 @@ class MessageConsumer(AsyncJsonWebsocketConsumer):
                     Messages_obj_dic['message'] = i.message
                 Messages_obj_list.append(Messages_obj_dic)
 
+            # queryset = Messages.objects.filter(room=Room_obj,is_delete=0)
+            # serializer = MessagesSerializer(queryset, many=True)
+            # print(serializer.data)
+            # result = {'result': 'true', 'Message': serializer.data, 'internalCode': '005'}
             result = {'result': 'true', 'Message': Messages_obj_list, 'internalCode': '005'}
         else:
             result = {'result': 'false', 'Message': 'user id does not in group', 'internalCode': '005'}
 
         return result
+
+# extra 
+    # async def handle_chunk(self, message, **kwargs):
+    #     upload_size = self.session.get('upload_size')
+    #     temp_destination = self.session.get('upload_file')
+
+    #     if not upload_size or not temp_destination:
+    #         return self.error('Invalid request. Please try again.')
+
+    #     self.session['upload_file'].write(message)
+    #     size = self.session['upload_file'].tell()
+
+    #     percent = round((size / upload_size) * 100)
+    #     await self.send_json({
+    #         'action': 'progress',
+    #         'percent': percent,
+    #         'file_size': size
+    #     })
+
+    #     if size >= upload_size:
+    #         self.session['upload_file'].flush()
+    #         file_name = await self.handle_complete(self.session['upload_file'])
+
+    #         await self.send_json({
+    #             'action': 'complete',
+    #             'file_size': size,
+    #             'file_name': file_name
+    #         }, close=True)
